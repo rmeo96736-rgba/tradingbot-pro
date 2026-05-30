@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Gainz Trading Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f0;color:#1a1a1a;min-height:100vh}
+.topbar{background:#1a1a1a;color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center}
+.topbar h1{font-size:16px;font-weight:500}
+.topbar span{font-size:12px;opacity:.6}
+.container{max-width:500px;margin:0 auto;padding:16px}
+.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.metric{background:#fff;border-radius:10px;padding:14px;border:.5px solid rgba(0,0,0,.08)}
+.metric-label{font-size:11px;color:#888;margin-bottom:4px}
+.metric-val{font-size:22px;font-weight:500;color:#1a1a1a}
+.metric-val.pos{color:#1D9E75}
+.metric-val.neg{color:#E24B4A}
+.card{background:#fff;border-radius:12px;border:.5px solid rgba(0,0,0,.08);padding:16px;margin-bottom:14px}
+.card-title{font-size:13px;font-weight:500;margin-bottom:12px;color:#444}
+.chart-wrap{position:relative;width:100%;height:200px}
+.trade-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid #f0f0f0}
+.trade-row:last-child{border-bottom:none}
+.badge{font-size:11px;font-weight:500;padding:3px 8px;border-radius:6px}
+.badge.buy{background:#EAF3DE;color:#3B6D11}
+.badge.sell{background:#FCEBEB;color:#A32D2D}
+.badge.win{background:#E1F5EE;color:#0F6E56}
+.badge.loss{background:#FCEBEB;color:#A32D2D}
+.badge.open{background:#E6F1FB;color:#185FA5}
+.trade-sym{font-size:13px;font-weight:500;min-width:65px}
+.trade-meta{font-size:11px;color:#888;flex:1}
+.trade-pnl{font-size:13px;font-weight:500}
+.trade-pnl.pos{color:#1D9E75}
+.trade-pnl.neg{color:#E24B4A}
+.trade-pnl.open{color:#185FA5}
+.del-btn{background:none;border:none;cursor:pointer;color:#ccc;font-size:18px;padding:0 2px;line-height:1}
+.del-btn:hover{color:#E24B4A}
+.day-total{font-size:11px;font-weight:500}
+.day-total.pos{color:#1D9E75}
+.day-total.neg{color:#E24B4A}
+.filter-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.chip{font-size:11px;padding:5px 12px;border-radius:20px;border:.5px solid #ddd;background:#fff;cursor:pointer;color:#666}
+.chip.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.add-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:#1a1a1a;color:#fff;border:none;border-radius:10px;padding:12px;width:100%;cursor:pointer;font-size:14px;margin-bottom:14px}
+.add-btn:hover{opacity:.85}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:18px 18px 0 0;padding:20px;width:100%;max-width:500px}
+.modal-title{font-size:16px;font-weight:500;margin-bottom:16px}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+.form-group label{font-size:11px;color:#888;display:block;margin-bottom:4px}
+.form-group input,.form-group select{width:100%;padding:9px 12px;border:.5px solid #ddd;border-radius:8px;font-size:14px;background:#fff;color:#1a1a1a}
+.save-btn{background:#1a1a1a;color:#fff;border:none;border-radius:10px;padding:12px;width:100%;cursor:pointer;font-size:14px;font-weight:500;margin-bottom:8px}
+.cancel-btn{background:transparent;border:.5px solid #ddd;border-radius:10px;padding:11px;width:100%;cursor:pointer;font-size:14px;color:#666}
+.empty{text-align:center;padding:2rem;color:#aaa;font-size:13px}
+.code-box{background:#f5f5f0;border-radius:8px;padding:10px 12px;font-size:11px;font-family:monospace;color:#333;white-space:pre;overflow-x:auto;line-height:1.7;margin-bottom:10px}
+.copy-btn{background:transparent;border:.5px solid #ddd;border-radius:8px;padding:7px 14px;cursor:pointer;font-size:12px;color:#444;width:100%;margin-bottom:12px}
+.copy-btn:hover{background:#f0f0ea}
+.tab-row{display:flex;gap:0;margin-bottom:14px;border:.5px solid #ddd;border-radius:10px;overflow:hidden}
+.tab{flex:1;padding:9px;text-align:center;font-size:12px;cursor:pointer;background:#fff;border:none;color:#888}
+.tab.active{background:#1a1a1a;color:#fff}
+.section{display:none}
+.section.active{display:block}
+.info-box{background:#EAF3DE;border-radius:8px;padding:12px;font-size:12px;color:#3B6D11;line-height:1.7;margin-bottom:12px}
+.warn-box{background:#FAEEDA;border-radius:8px;padding:12px;font-size:12px;color:#854F0B;line-height:1.7;margin-bottom:12px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1><i class="ti ti-chart-bar" style="font-size:16px;vertical-align:-2px;margin-right:6px"></i>Gainz Dashboard</h1>
+  <span id="topdate"></span>
+</div>
+
+<div class="container">
+
+  <div class="tab-row">
+    <button class="tab active" onclick="showTab('overview')">Overview</button>
+    <button class="tab" onclick="showTab('trades')">Trades</button>
+    <button class="tab" onclick="showTab('connect')">EA Connect</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="section active" id="tab-overview">
+    <div class="metric-grid">
+      <div class="metric">
+        <div class="metric-label">Aaj ka P&amp;L</div>
+        <div class="metric-val" id="m-today">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Total P&amp;L</div>
+        <div class="metric-val" id="m-total">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Aaj ke trades</div>
+        <div class="metric-val" id="m-count">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Win rate</div>
+        <div class="metric-val" id="m-wr">--</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Last 7 din ka P&amp;L</div>
+      <div class="chart-wrap">
+        <canvas id="chart7" role="img" aria-label="Last 7 days daily PnL bar chart">Daily P&L bar chart</canvas>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Aaj ke trades</div>
+      <div id="today-list"><div class="empty">Aaj koi trade nahi</div></div>
+    </div>
+  </div>
+
+  <!-- ALL TRADES -->
+  <div class="section" id="tab-trades">
+    <button class="add-btn" onclick="openModal()">
+      <i class="ti ti-plus"></i> Trade manually add karo
+    </button>
+    <div class="filter-row">
+      <button class="chip active" data-f="all" onclick="setFilter('all')">Sab</button>
+      <button class="chip" data-f="open" onclick="setFilter('open')">Open</button>
+      <button class="chip" data-f="win" onclick="setFilter('win')">Win</button>
+      <button class="chip" data-f="loss" onclick="setFilter('loss')">Loss</button>
+    </div>
+    <div id="all-list"><div class="empty">Koi trade nahi</div></div>
+  </div>
+
+  <!-- EA CONNECT -->
+  <div class="section" id="tab-connect">
+
+    <div class="card">
+      <div class="card-title">Option A — MT5 CSV Import</div>
+      <p style="font-size:12px;color:#666;line-height:1.7;margin-bottom:10px">
+        MT5 mein <strong>History</strong> tab open karo, right-click karke <strong>Save as Report</strong> choose karo (CSV format). Phir yahan upload karo.
+      </p>
+      <input type="file" id="csv-input" accept=".csv" onchange="importCSV(event)" style="font-size:12px;width:100%;margin-bottom:8px"/>
+      <div class="info-box">Har baar MT5 se CSV export karo aur yahan upload karo — sab trades aa jayenge.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Option B — EA Auto Send (Local Server)</div>
+      <div class="warn-box">Iske liye computer pe Python install hona chahiye aur ek local server chalana padega.</div>
+
+      <p style="font-size:12px;color:#444;font-weight:500;margin-bottom:6px">Step 1 — Python server script (server.py):</p>
+      <div class="code-box" id="code-server">from http.server import HTTPServer, BaseHTTPRequestHandler
+import json, datetime
+
+trades = []
+
+class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        length = int(self.headers['Content-Length'])
+        data = json.loads(self.rfile.read(length))
+        data['date'] = str(datetime.date.today())
+        data['id'] = int(datetime.datetime.now().timestamp()*1000)
+        trades.append(data)
+        # Save to file so dashboard can read it
+        with open('trades.json', 'w') as f:
+            json.dump(trades, f)
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'OK')
+    def log_message(self, *args): pass
+
+print("Server chalu hai: http://localhost:8765")
+HTTPServer(('localhost', 8765), Handler).serve_forever()</div>
+      <button class="copy-btn" onclick="copyCode('code-server')">Code copy karo</button>
+
+      <p style="font-size:12px;color:#444;font-weight:500;margin-bottom:6px">Step 2 — Terminal mein chalao:</p>
+      <div class="code-box">python server.py</div>
+
+      <p style="font-size:12px;color:#444;font-weight:500;margin-bottom:6px">Step 3 — MT5 EA mein add karo (v28 ke saath use karo):</p>
+      <div class="code-box" id="code-ea">void SendToDashboard(string sym, string tp,
+   double pnl, double lots, string status)
+{
+   string url = "http://localhost:8765/trade";
+   string body = "{\"sym\":\"" + sym + "\","
+      + "\"type\":\"" + tp + "\","
+      + "\"pnl\":" + DoubleToString(pnl,2) + ","
+      + "\"lots\":" + DoubleToString(lots,2) + ","
+      + "\"status\":\"" + status + "\"}";
+   char post[], result[];
+   StringToCharArray(body, post, 0, StringLen(body));
+   string hdrs = "Content-Type: application/json\r\n";
+   WebRequest("POST",url,hdrs,5000,post,result,hdrs);
+}
+
+void OnTradeTransaction(
+   const MqlTradeTransaction &trans,
+   const MqlTradeRequest &req,
+   const MqlTradeResult &res)
+{
+   if(trans.type==TRADE_TRANSACTION_DEAL_ADD)
+   if(HistoryDealSelect(trans.deal))
+   {
+      double profit = HistoryDealGetDouble(
+         trans.deal, DEAL_PROFIT);
+      double vol = HistoryDealGetDouble(
+         trans.deal, DEAL_VOLUME);
+      string sym = HistoryDealGetString(
+         trans.deal, DEAL_SYMBOL);
+      int dtype = (int)HistoryDealGetInteger(
+         trans.deal, DEAL_TYPE);
+      string st = profit>0?"win":
+                  profit<0?"loss":"open";
+      string tt = dtype==DEAL_TYPE_BUY?
+                  "buy":"sell";
+      SendToDashboard(sym,tt,profit,vol,st);
+   }
+}</div>
+      <button class="copy-btn" onclick="copyCode('code-ea')">Code copy karo</button>
+
+      <p style="font-size:12px;color:#444;font-weight:500;margin-bottom:6px">Step 4 — MT5 settings mein allow karo:</p>
+      <div class="code-box">Tools > Options > Expert Advisors >
+Allow WebRequest for listed URL:
+http://localhost:8765</div>
+
+      <div class="info-box">Sab sahi set karne ke baad, har trade close hone pe automatically dashboard mein dikhega.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Data reset karo</div>
+      <button class="cancel-btn" onclick="clearAll()" style="color:#E24B4A;border-color:#E24B4A">Sab trades delete karo</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeOut(event)">
+  <div class="modal">
+    <p class="modal-title">Naya trade</p>
+    <div class="form-grid">
+      <div class="form-group"><label>Symbol</label><input type="text" id="f-sym" placeholder="EURUSD"/></div>
+      <div class="form-group"><label>Type</label><select id="f-type"><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
+      <div class="form-group"><label>P&amp;L ($)</label><input type="number" id="f-pnl" placeholder="25.50" step="0.01"/></div>
+      <div class="form-group"><label>Status</label><select id="f-status"><option value="win">Win</option><option value="loss">Loss</option><option value="open">Open</option></select></div>
+      <div class="form-group"><label>Lots</label><input type="number" id="f-lots" placeholder="0.01" step="0.01"/></div>
+      <div class="form-group"><label>Date</label><input type="date" id="f-date"/></div>
+    </div>
+    <button class="save-btn" onclick="addTrade()">Save karo</button>
+    <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let trades = JSON.parse(localStorage.getItem('gainz_v2') || '[]');
+let activeFilter = 'all';
+let chart7 = null;
+
+function save(){ localStorage.setItem('gainz_v2', JSON.stringify(trades)); }
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function fmt(n){ return (n<0?'-$':'$')+Math.abs(n).toFixed(2); }
+
+function showTab(id){
+  ['overview','trades','connect'].forEach((t,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',t===id);
+    document.getElementById('tab-'+t).classList.toggle('active',t===id);
+  });
+  if(id==='overview') renderChart();
+}
+
+function setFilter(f){
+  activeFilter=f;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('active',c.dataset.f===f));
+  renderAll();
+}
+
+function openModal(){
+  document.getElementById('f-date').value=todayStr();
+  ['f-sym','f-pnl','f-lots'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('modal').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function closeOut(e){ if(e.target.id==='modal') closeModal(); }
+
+function addTrade(){
+  const sym=document.getElementById('f-sym').value.trim().toUpperCase();
+  const type=document.getElementById('f-type').value;
+  const pnlRaw=parseFloat(document.getElementById('f-pnl').value);
+  const status=document.getElementById('f-status').value;
+  const lots=parseFloat(document.getElementById('f-lots').value)||0;
+  const date=document.getElementById('f-date').value||todayStr();
+  if(!sym){alert('Symbol daalo');return;}
+  if(status!=='open'&&isNaN(pnlRaw)){alert('P&L daalo');return;}
+  const pnl=status==='open'?0:status==='loss'?-Math.abs(pnlRaw):Math.abs(pnlRaw);
+  trades.unshift({id:Date.now(),sym,type,pnl,status,lots,date});
+  save(); closeModal(); render();
+}
+
+function deleteTrade(id){
+  if(!confirm('Delete karo?'))return;
+  trades=trades.filter(t=>t.id!==id);
+  save(); render();
+}
+
+function clearAll(){
+  if(!confirm('Sab trades delete karo?'))return;
+  trades=[];
+  save(); render();
+}
+
+function tradeRow(t){
+  const pc=t.status==='open'?'open':t.pnl>=0?'pos':'neg';
+  const pt=t.status==='open'?'--':fmt(t.pnl);
+  return `<div class="trade-row">
+    <span class="badge ${t.type}">${t.type.toUpperCase()}</span>
+    <div style="flex:1;min-width:0"><div class="trade-sym">${t.sym}</div><div class="trade-meta">${t.lots?t.lots+' lots':''}</div></div>
+    <span class="badge ${t.status}" style="margin-right:8px">${t.status==='win'?'Win':t.status==='loss'?'Loss':'Open'}</span>
+    <span class="trade-pnl ${pc}">${pt}</span>
+    <button class="del-btn" onclick="deleteTrade(${t.id})">x</button>
+  </div>`;
+}
+
+function renderMetrics(){
+  const today=todayStr();
+  const todayT=trades.filter(t=>t.date===today);
+  const tPnl=todayT.filter(t=>t.status!=='open').reduce((s,t)=>s+t.pnl,0);
+  const allPnl=trades.filter(t=>t.status!=='open').reduce((s,t)=>s+t.pnl,0);
+  const closed=trades.filter(t=>t.status!=='open');
+  const wr=closed.length?Math.round(closed.filter(t=>t.status==='win').length/closed.length*100):null;
+  const mp=document.getElementById('m-today');
+  mp.textContent=fmt(tPnl); mp.className='metric-val '+(tPnl>0?'pos':tPnl<0?'neg':'');
+  const tp=document.getElementById('m-total');
+  tp.textContent=fmt(allPnl); tp.className='metric-val '+(allPnl>0?'pos':allPnl<0?'neg':'');
+  document.getElementById('m-count').textContent=todayT.length;
+  document.getElementById('m-wr').textContent=wr!==null?wr+'%':'--';
+}
+
+function renderToday(){
+  const t=trades.filter(t=>t.date===todayStr());
+  document.getElementById('today-list').innerHTML=t.length?t.map(tradeRow).join(''):'<div class="empty">Aaj koi trade nahi</div>';
+}
+
+function renderAll(){
+  let f=activeFilter==='all'?[...trades]:trades.filter(t=>t.status===activeFilter);
+  const el=document.getElementById('all-list');
+  if(!f.length){el.innerHTML='<div class="empty">Koi trade nahi</div>';return;}
+  const byD={};
+  f.forEach(t=>{if(!byD[t.date])byD[t.date]=[];byD[t.date].push(t);});
+  const dates=Object.keys(byD).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML=dates.map(d=>{
+    const dt=byD[d];
+    const dp=dt.filter(t=>t.status!=='open').reduce((s,t)=>s+t.pnl,0);
+    const label=new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',weekday:'short'});
+    const pc=dp>0?'pos':dp<0?'neg':'';
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;color:#aaa">${label}</span>
+        <span class="day-total ${pc}">${dp!==0?fmt(dp):''}</span>
+      </div>
+      <div style="background:#fff;border-radius:10px;border:.5px solid rgba(0,0,0,.08);padding:0 12px">${dt.map(tradeRow).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderChart(){
+  const days=[]; for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().slice(0,10));}
+  const labels=days.map(d=>new Date(d+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short'}));
+  const data=days.map(d=>parseFloat(trades.filter(t=>t.date===d&&t.status!=='open').reduce((s,t)=>s+t.pnl,0).toFixed(2)));
+  if(chart7){chart7.destroy();chart7=null;}
+  const canvas=document.getElementById('chart7');
+  if(!canvas) return;
+  chart7=new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets:[{label:'P&L',data,backgroundColor:data.map(v=>v>=0?'#1D9E75':'#E24B4A'),borderRadius:4,borderSkipped:false}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>(ctx.raw>=0?'+$':'-$')+Math.abs(ctx.raw).toFixed(2)}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#aaa',font:{size:11}}},
+        y:{grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#aaa',font:{size:11},callback:v=>(v>=0?'$':'-$')+Math.abs(v)}}
+      }
+    }
+  });
+}
+
+function importCSV(e){
+  const file=e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const lines=ev.target.result.split('\n');
+    let imported=0;
+    lines.forEach((line,idx)=>{
+      if(idx===0||!line.trim())return;
+      const cols=line.split(',');
+      if(cols.length<4)return;
+      const sym=(cols[2]||'').replace(/"/g,'').trim();
+      const typeRaw=(cols[3]||'').replace(/"/g,'').toLowerCase();
+      const pnl=parseFloat((cols[cols.length-2]||'0').replace(/"/g,''));
+      const dateRaw=(cols[0]||todayStr()).replace(/"/g,'').trim().slice(0,10);
+      if(!sym)return;
+      trades.unshift({id:Date.now()+idx,sym,type:typeRaw.includes('sell')?'sell':'buy',pnl,status:pnl>0?'win':pnl<0?'loss':'open',lots:parseFloat(cols[4])||0,date:dateRaw});
+      imported++;
+    });
+    save(); render(); alert(imported+' trades import ho gaye!');
+  };
+  reader.readAsText(file);
+}
+
+function copyCode(id){
+  const text=document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(()=>alert('Copy ho gaya!')).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('Copy ho gaya!');
+  });
+}
+
+function render(){ renderMetrics(); renderToday(); renderAll(); renderChart(); }
+
+document.getElementById('topdate').textContent=new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+render();
+</script>
+</body>
+</html>
